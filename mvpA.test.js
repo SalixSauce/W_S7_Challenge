@@ -19,6 +19,8 @@ import { BrowserRouter as Router } from 'react-router-dom'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import server from './backend/mock-server'
+import * as yup from 'yup';
+
 
 jest.setTimeout(750) // default 5000 too long for Codegrade
 
