@@ -1,19 +1,11 @@
 import React, { useState } from 'react';
 import * as yup from 'yup';
 
-// Validation errors to be used with Yup
-const validationErrors = {
-  fullNameTooShort: 'full name must be at least 3 characters',
-  fullNameTooLong: 'full name must be at most 20 characters',
-  sizeIncorrect: 'size must be S or M or L',
-};
-
 // Yup validation schema
 const schema = yup.object().shape({
   fullName: yup.string().min(3, 'full name must be at least 3 characters').required(),
   size: yup.string().oneOf(['S', 'M', 'L'], 'size must be S or M or L').required(),
 });
-
 
 // Toppings data
 const toppings = [
@@ -37,14 +29,14 @@ export default function Form() {
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
     if (type === 'checkbox') {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         toppings: checked
           ? [...prev.toppings, name]
-          : prev.toppings.filter((topping) => topping !== name),
+          : prev.toppings.filter(topping => topping !== name),
       }));
     } else {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         [name]: value,
       }));
@@ -54,32 +46,31 @@ export default function Form() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-        await schema.validate(formData, { abortEarly: false });
-        setErrors({});
-        
-        // Determine size text
-        const sizeText = formData.size === 'S' ? 'small' : formData.size === 'M' ? 'medium' : 'large';
-        
-        // Count toppings
-        const toppingsCount = formData.toppings.length;
-        const toppingsText = toppingsCount > 0 ? `with ${toppingsCount} topping${toppingsCount > 1 ? 's' : ''}` : 'with no toppings';
-        
-        // Set submission message
-        setSubmissionMessage(`Thank you for your order, ${formData.fullName}! Your ${sizeText} pizza ${toppingsText} is on the way.`);
-        
-        // Clear the form after submission
-        setFormData({ fullName: '', size: '', toppings: [] });
+      await schema.validate(formData, { abortEarly: false });
+      setErrors({});
+      
+      // Determine size text
+      const sizeText = formData.size === 'S' ? 'small' : formData.size === 'M' ? 'medium' : 'large';
+      
+      // Count toppings
+      const toppingsCount = formData.toppings.length;
+      const toppingsText = toppingsCount > 0 ? `with ${toppingsCount} topping${toppingsCount > 1 ? 's' : ''}` : 'with no toppings';
+      
+      // Set submission message
+      setSubmissionMessage(`Thank you for your order, ${formData.fullName}! Your ${sizeText} pizza ${toppingsText} is on the way.`);
+      
+      // Clear the form after submission
+      setFormData({ fullName: '', size: '', toppings: [] });
     } catch (err) {
-        if (err.inner) {
-            const formErrors = err.inner.reduce((acc, curr) => {
-                acc[curr.path] = curr.message;
-                return acc;
-            }, {});
-            setErrors(formErrors);
-        }
+      if (err.inner) {
+        const formErrors = err.inner.reduce((acc, curr) => {
+          acc[curr.path] = curr.message;
+          return acc;
+        }, {});
+        setErrors(formErrors);
+      }
     }
-};
-
+  };
 
   // Determine if the form is valid
   const isFormValid = formData.fullName.length >= 3 && formData.size;
