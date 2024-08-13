@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import * as yup from 'yup';
 
-// Yup validation schema
+
 const schema = yup.object().shape({
-  fullName: yup.string().min(3, 'full name must be at least 3 characters').required(),
-  size: yup.string().oneOf(['S', 'M', 'L'], 'size must be S or M or L').required(),
+  fullName: yup
+    .string()
+    .trim() 
+    .min(3, 'full name must be at least 3 characters')
+    .max(20, 'Full name must be at most 20 characters')
+    .required('Full name is required'),
+  size: yup
+    .string()
+    .oneOf(['S', 'M', 'L'], 'Size must be S or M or L')
+    .required('Size is required'),
 });
 
-// Toppings data
 const toppings = [
   { topping_id: '1', text: 'Pepperoni' },
   { topping_id: '2', text: 'Green Peppers' },
@@ -26,62 +33,79 @@ export default function Form() {
   const [errors, setErrors] = useState({});
   const [submissionMessage, setSubmissionMessage] = useState('');
 
-  const handleChange = (e) => {
-    const { name, value, checked, type } = e.target;
-    if (type === 'checkbox') {
-      setFormData(prev => ({
-        ...prev,
-        toppings: checked
-          ? [...prev.toppings, name]
-          : prev.toppings.filter(topping => topping !== name),
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const validateData = async (data) => {
     try {
-      await schema.validate(formData, { abortEarly: false });
+      await schema.validate(data, { abortEarly: false });
       setErrors({});
-      
-      // Determine size text
-      const sizeText = formData.size === 'S' ? 'small' : formData.size === 'M' ? 'medium' : 'large';
-      
-      // Count toppings
-      const toppingsCount = formData.toppings.length;
-      const toppingsText = toppingsCount > 0 ? `with ${toppingsCount} topping${toppingsCount > 1 ? 's' : ''}` : 'with no toppings';
-      
-      // Set submission message
-      setSubmissionMessage(`Thank you for your order, ${formData.fullName}! Your ${sizeText} pizza ${toppingsText} is on the way.`);
-      
-      // Clear the form after submission
-      setFormData({ fullName: '', size: '', toppings: [] });
+      return true;
     } catch (err) {
-      if (err.inner) {
-        const formErrors = err.inner.reduce((acc, curr) => {
-          acc[curr.path] = curr.message;
-          return acc;
-        }, {});
-        setErrors(formErrors);
-      }
+      const formErrors = err.inner.reduce((acc, curr) => {
+        acc[curr.path] = curr.message;
+        return acc;
+      }, {});
+      setErrors(formErrors);
+      return false;
     }
   };
 
-  // Determine if the form is valid
-  const isFormValid = formData.fullName.length >= 3 && formData.size;
+
+  useEffect(() => {
+    validateData(formData);
+  }, [formData]);
+
+  const handleChange = useCallback((e) => {
+    const { name, value, checked, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        type === 'checkbox'
+          ? checked
+            ? [...prev.toppings, value]
+            : prev.toppings.filter((topping) => topping !== value)
+          : value,
+    }));
+  }, []);
+
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      const isValid = await validateData(formData);
+      if (!isValid) return;
+
+     
+      const sizeText = formData.size === 'S' ? 'small' : formData.size === 'M' ? 'medium' : 'large';
+
+      
+      const toppingsCount = formData.toppings.length;
+      const toppingsText =
+        toppingsCount > 0
+          ? `with ${toppingsCount} topping${toppingsCount > 1 ? 's' : ''}`
+          : 'with no toppings';
+
+     
+      setSubmissionMessage(
+        `Thank you for your order, ${formData.fullName.trim()}! Your ${sizeText} pizza ${toppingsText} is on the way.`
+      );
+
+     
+      setFormData({ fullName: '', size: '', toppings: [] });
+    },
+    [formData]
+  );
+
+
+  const isFormValid = !Object.keys(errors).length && formData.fullName.trim() && formData.size;
 
   return (
     <form onSubmit={handleSubmit}>
       <h2>Order Your Pizza</h2>
       {submissionMessage && <div className="success">{submissionMessage}</div>}
+
       <div className="input-group">
         <div>
-          <label htmlFor="fullName">Full Name</label><br />
+          <label htmlFor="fullName">Full Name</label>
+          <br />
           <input
             placeholder="Type full name"
             id="fullName"
@@ -96,7 +120,8 @@ export default function Form() {
 
       <div className="input-group">
         <div>
-          <label htmlFor="size">Size</label><br />
+          <label htmlFor="size">Size</label>
+          <br />
           <select id="size" name="size" value={formData.size} onChange={handleChange}>
             <option value="">----Choose Size----</option>
             <option value="S">Small</option>
@@ -108,12 +133,14 @@ export default function Form() {
       </div>
 
       <div className="input-group">
-        <label>Toppings:</label><br />
+        <label>Toppings:</label>
+        <br />
         {toppings.map((topping) => (
           <label key={topping.topping_id}>
             <input
-              name={topping.text}
+              name="toppings"
               type="checkbox"
+              value={topping.text}
               checked={formData.toppings.includes(topping.text)}
               onChange={handleChange}
             />
